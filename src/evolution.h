@@ -22,6 +22,15 @@ int Objective_Function(std::vector<int> perm, std::vector<std::vector<int>> weig
  */
 std::vector<int> invert(std::vector<int> perm, int i, int j);
 
+/// <summary>
+/// Effectively calculates cycle length of the new permutation
+/// </summary>
+/// <param name="perm_old"> old permutation </param>
+/// <param name="length_old"> old path length </param>
+/// <param name="i"> start of inversion</param>
+/// <param name="j"> end of inversion</param>
+/// <param name="weights"></param>
+/// <returns> new path length</returns>
 double NewLength(std::vector<int> perm_old, double length_old, int i, int j, std::vector<std::vector<int>> weights);
 
 class Chromosome {
@@ -37,10 +46,11 @@ public:
 // przy tworzeniu wybrac sposob mutacji jako enum
 // potem switch case po enumach?
 class Evolution{
-private:
+public:
 	Chromosome MutateChrom(Chromosome chrom);
-
-	void CrossChrom();
+	Chromosome CrossChrom(Chromosome ch1, Chromosome ch2);
+	int FindPosition(std::vector<int> perm, int value);
+	void SortPopulation();
 
 public:
 	std::string data_path;

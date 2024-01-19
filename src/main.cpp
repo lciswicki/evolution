@@ -19,5 +19,8 @@ int main() {
 
 	Evolution ev1(data_path, pop_size, prob);
 
-	PrintVectorInt(ev1.population[0].perm);
+	//PrintVectorInt(ev1.population[0].perm);
+	std::cout << ev1.population[0].value << std::endl;
+	ev1.population[0] = ev1.MutateChrom(ev1.population[0]);
+	std::cout << ev1.population[0].value << std::endl;
 }

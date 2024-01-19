@@ -3,6 +3,8 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <chrono>
+#include <random>
 
 
 int Objective_Function(std::vector<int> perm, std::vector<std::vector<int>> weights) {
@@ -16,13 +18,7 @@ int Objective_Function(std::vector<int> perm, std::vector<std::vector<int>> weig
 	return c_weight;
 }
 
-/// <summary>
-/// Inverts part of a permutation from index i to j
-/// </summary>
-/// <param name="perm"> permuatation</param>
-/// <param name="i"> start of inversion</param>
-/// <param name="j"> end of inversion</param>
-/// <returns> inverted permutation </returns>
+
 std::vector<int> invert(std::vector<int> perm, int i, int j) {
     int p_size = perm.size();
     if (i < 0 || i >= p_size) {
@@ -48,15 +44,7 @@ std::vector<int> invert(std::vector<int> perm, int i, int j) {
     return perm;
 }
 
-/// <summary>
-/// Effectively calculates cycle length of the new permutation
-/// </summary>
-/// <param name="perm_old"> old permutation </param>
-/// <param name="length_old"> old path length </param>
-/// <param name="i"> start of inversion</param>
-/// <param name="j"> end of inversion</param>
-/// <param name="weights"></param>
-/// <returns> new path length</returns>
+
 double NewLength(std::vector<int> perm_old, double length_old, int i, int j, std::vector<std::vector<int>> weights) {
     int p_size = perm_old.size();
     double length_new = length_old;
@@ -96,11 +84,36 @@ int Chromosome::EvalChrom(){
 Chromosome::~Chromosome(){};
 
 Chromosome Evolution::MutateChrom(Chromosome chrom){
+    std::mt19937 rng(std::chrono::steady_clock::now().time_since_epoch().count());
+    std::uniform_int_distribution<std::mt19937::result_type> distrib_i(0, size - 2);
+    int i = distrib_i(rng);
+    std::uniform_int_distribution<std::mt19937::result_type> distrib_j(i, size - 1);
+    int j = distrib_j(rng);
+
+    std::vector<int> new_perm = invert(chrom.perm, i, j);
+    int new_length = NewLength(chrom.perm, chrom.value, i, j, weights);
+    chrom.perm = new_perm;
+    chrom.value = new_length;
+    return chrom;
+};
+
+int Evolution::FindPosition(std::vector<int> perm, int value) {
+    for (int i = 0; i < size; i++) {
+        if (perm[i] == value)
+            return i;
+    }
+    std::cout << "Error: " << value << " not found in permutation." << std::endl;
+    return -1;
+}
+
+// Crossover method PMX from this paper by Gokturk Ucoluk
+// https://user.ceng.metu.edu.tr/~ucoluk/research/publications/tspnew.pdf
+Chromosome Evolution::CrossChrom(Chromosome ch1, Chromosome ch2){
+    std::vector<int> new_perm;
 
 };
 
-void Evolution::CrossChrom(){};
-
+void Evolution::SortPopulation() { };
 
 Evolution::Evolution(std::string data_path, int population_size, int prob) {
 	this->group_size = population_size;
