@@ -11,9 +11,13 @@
 #include <chrono>
 
 int main() {
-	int n = 20;
+	int pop_size = 20;
+	int prob = 0.1;
 	std::vector<int> perm1 = Perm_Gen(20);
 
-    std::string file_name = "./Data/xqf131.tsp";
+    std::string data_path = "./Data/xqf131.tsp";
 
+	Evolution ev1(data_path, pop_size, prob);
+
+	PrintVectorInt(ev1.population[0].perm);
 }
