@@ -3,6 +3,10 @@
 #include <string>
 #include <tuple>
 #include "Util.h"
+#include <stdexcept>
+#include <chrono>
+#include <random>
+#include <iostream>
 
 /**
  * @brief Calculates objective function for a permutation
@@ -10,7 +14,7 @@
  * @param perm starting permutation
  * @return Objective value of the permutation
  */
-int Objective_Function(std::vector<int> perm, std::vector<std::vector<int>> weights);
+double Objective_Function(std::vector<int> perm, std::vector<std::vector<int>> weights);
 
 /**
  * @brief Inverts a part of a vector
@@ -33,35 +37,51 @@ std::vector<int> invert(std::vector<int> perm, int i, int j);
 /// <returns> new path length</returns>
 double NewLength(std::vector<int> perm_old, double length_old, int i, int j, std::vector<std::vector<int>> weights);
 
+int FindPosition(std::vector<int> perm, double value);
+
 class Chromosome {
 public:
-	int value;
+	double value;
 	std::vector<int> perm;
+	//double getValue() const { return value; } // maybe have to use this later
 
-	Chromosome(std::vector<int> perm, int value);
+	Chromosome(std::vector<int> perm, double value);
 	int EvalChrom();
 	~Chromosome();
 };
 
-// przy tworzeniu wybrac sposob mutacji jako enum
-// potem switch case po enumach?
+
+/// <summary>
+/// To sort chromosomes by value
+/// </summary>
+/// <param name="s1"></param>
+/// <param name="s2"></param>
+/// <returns></returns>
+bool operator<(const Chromosome& s1, const Chromosome& s2);
+
+/// <summary>
+/// 
+/// </summary>
 class Evolution{
 public:
 	Chromosome MutateChrom(Chromosome chrom);
 	Chromosome CrossChrom(Chromosome ch1, Chromosome ch2);
-	int FindPosition(std::vector<int> perm, int value);
-	void SortPopulation();
+	
 
 public:
 	std::string data_path;
-	int group_size;
+	int population_size;
 	int size;
-	int prob;
 	std::vector<Chromosome> population;
 	std::vector<std::vector<int>> weights;
 
-	Evolution(std::string data_path, int population_size, int prob);
+	Evolution(std::string data_path, int population_size);
 
-	void Evolve(bool verbose = false);
+	int Evolve(double mutation_prob, int no_of_pairs, int max_stale_iter, int max_generations, bool verbose = false);
 	~Evolution();
 };
+
+
+
+
+

@@ -6,10 +6,11 @@
 #include <chrono>
 #include <random>
 
+std::mt19937 rng(std::chrono::steady_clock::now().time_since_epoch().count());
 
-int Objective_Function(std::vector<int> perm, std::vector<std::vector<int>> weights) {
+double Objective_Function(std::vector<int> perm, std::vector<std::vector<int>> weights) {
 	int p_length = perm.size(); // permutation length
-	int c_weight = 0;   // cycle weight
+	double c_weight = 0;   // cycle weight
 	for (int i = 0; i < p_length - 1; i++) {
 		c_weight += weights[perm[i]][perm[i + 1]];
 	}
@@ -19,6 +20,7 @@ int Objective_Function(std::vector<int> perm, std::vector<std::vector<int>> weig
 }
 
 
+// O(n)
 std::vector<int> invert(std::vector<int> perm, int i, int j) {
     int p_size = perm.size();
     if (i < 0 || i >= p_size) {
@@ -72,32 +74,9 @@ double NewLength(std::vector<int> perm_old, double length_old, int i, int j, std
     return length_new;
 }
 
-Chromosome::Chromosome(std::vector<int> perm, int value) {
-	this->value = value;
-	this->perm = perm;
-}
 
-int Chromosome::EvalChrom(){
-	return 0;
-};
-
-Chromosome::~Chromosome(){};
-
-Chromosome Evolution::MutateChrom(Chromosome chrom){
-    std::mt19937 rng(std::chrono::steady_clock::now().time_since_epoch().count());
-    std::uniform_int_distribution<std::mt19937::result_type> distrib_i(0, size - 2);
-    int i = distrib_i(rng);
-    std::uniform_int_distribution<std::mt19937::result_type> distrib_j(i, size - 1);
-    int j = distrib_j(rng);
-
-    std::vector<int> new_perm = invert(chrom.perm, i, j);
-    int new_length = NewLength(chrom.perm, chrom.value, i, j, weights);
-    chrom.perm = new_perm;
-    chrom.value = new_length;
-    return chrom;
-};
-
-int Evolution::FindPosition(std::vector<int> perm, int value) {
+int FindPosition(std::vector<int> perm, double value) {
+    int size = perm.size();
     for (int i = 0; i < size; i++) {
         if (perm[i] == value)
             return i;
@@ -106,31 +85,138 @@ int Evolution::FindPosition(std::vector<int> perm, int value) {
     return -1;
 }
 
+
+Chromosome::Chromosome(std::vector<int> perm, double value) {
+	this->value = value;
+	this->perm = perm;
+}
+
+
+bool operator<(const Chromosome& s1, const Chromosome& s2) {
+    // maybe have to use getValue()
+    return s1.value < s2.value;
+};
+
+
+int Chromosome::EvalChrom(){
+	return 0;
+};
+
+
+Chromosome::~Chromosome(){};
+
+
+// O(n)
+Chromosome Evolution::MutateChrom(Chromosome chrom){
+    std::uniform_int_distribution<std::mt19937::result_type> distrib_i(0, size - 2);
+    int i = distrib_i(rng);
+    std::uniform_int_distribution<std::mt19937::result_type> distrib_j(i, size - 1);
+    int j = distrib_j(rng);
+
+    std::vector<int> new_perm = invert(chrom.perm, i, j);
+    double new_length = NewLength(chrom.perm, chrom.value, i, j, weights);
+    chrom.perm = new_perm;
+    chrom.value = new_length;
+    return chrom;
+};
+
+
+Evolution::Evolution(std::string data_path, int population_size){
+    this->population_size = population_size;
+    std::vector<std::vector<int>> coords = Parser(data_path);
+    std::vector<std::vector<int>> weights = Weights(coords);
+    this->weights = weights;
+    this->size = coords.size();
+
+    // adding starting chromosomes to the population
+    for (int i = 0; i < population_size; i++) {
+        std::vector<int> r_perm = Perm_Gen(size);
+        population.push_back(Chromosome(r_perm, Objective_Function(r_perm, weights)));
+    }
+};
+
+
 // Crossover method PMX from this paper by Gokturk Ucoluk
+// can improve time of setting value to constant from linear
 // https://user.ceng.metu.edu.tr/~ucoluk/research/publications/tspnew.pdf
+// O(n^2)
 Chromosome Evolution::CrossChrom(Chromosome ch1, Chromosome ch2){
-    std::vector<int> new_perm;
+    int ch1_size = ch1.perm.size();
+    std::uniform_int_distribution<std::mt19937::result_type> distrib(0, ch1_size - 1);
+    int crossover = distrib(rng); // values between zero and crossover are swapped
 
+    // swapping 
+    for (int i = 0; i < crossover; i++) {
+        int ch1_value = ch1.perm[i];
+        int ch2_value = ch2.perm[i];
+        int ch2_index = FindPosition(ch1.perm, ch2_value); // index of ch2_value in ch1's permutation
+        ch1.perm[i] = ch2_value;
+        ch1.perm[ch2_index] = ch1_value;
+    }
+    // possible to improve this to constant time
+    ch1.value = Objective_Function(ch1.perm, weights);
+
+    return ch1;
 };
 
-void Evolution::SortPopulation() { };
 
-Evolution::Evolution(std::string data_path, int population_size, int prob) {
-	this->group_size = population_size;
-	std::vector<std::vector<int>> coords = Parser(data_path);
-	std::vector<std::vector<int>> weights = Weights(coords);
-	this->weights = weights;
-	this->prob = prob;
-	this->size = coords.size();
+int Evolution::Evolve(double mutation_prob, int no_of_pairs, int max_stale_iter, int max_generations, bool verbose){
+    std::sort(population.begin(), population.end());
+    int stale_iter_counter = 0;
+    int best_length = population[0].value;
+    int generation = 0;
 
-	for (int i = 0; i < population_size; i++) {
-		std::vector<int> r_perm = Perm_Gen(size);
-		population.push_back(Chromosome(r_perm, Objective_Function(r_perm, weights)));
-	}
+    std::uniform_real_distribution<float> distrib(0, 1);
+
+    while (generation < max_generations && stale_iter_counter < max_stale_iter) {
+        if (verbose && generation % 10 == 0) {
+            std::cout << "gen: " << generation << "\tbest: " << best_length << std::endl;
+        }
+
+        std::sort(population.begin(), population.end());
+
+        // breeding best chromosomes, generating 2 * no_of_pairs too much so will have te remove some later
+        // O(n^3)
+        for (int i = 0; i < no_of_pairs; i += 2) {
+            population.push_back(CrossChrom(population[i], population[i + 1]));
+            population.push_back(CrossChrom(population[i + 1], population[i]));
+        }
+
+        std::sort(population.begin(), population.end());
+        // removing additional chromosomes
+        for (int i = 0; i < no_of_pairs; i++) {
+            population.pop_back();
+        }
+
+        int new_length = population[0].value;
+
+        if (new_length == best_length) {
+            stale_iter_counter++;
+        }
+        else {
+            stale_iter_counter = 0;
+        }
+
+        best_length = new_length;
+
+        // mutating chromosomes
+        for (int i = 0; i < population_size; i++) { // O(p)
+            if (distrib(rng) < mutation_prob) {
+                population[i] = MutateChrom(population[i]);
+            }
+        }
+
+        generation++;
+    }
+
+    if (verbose) {
+        std::cout << "best length = " << best_length << " real length = " << Objective_Function(population[0].perm, weights) << std::endl;
+        PrintVectorInt(population[0].perm);
+    }
+
+    return best_length;
+    
 };
 
-void Evolution::Evolve(bool verbose){
-	
-};
 
 Evolution::~Evolution() {};
