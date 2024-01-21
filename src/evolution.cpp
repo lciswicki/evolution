@@ -6,6 +6,7 @@
 #include <chrono>
 #include <random>
 
+
 std::mt19937 rng(std::chrono::steady_clock::now().time_since_epoch().count());
 
 double Objective_Function(std::vector<int> perm, std::vector<std::vector<int>> weights) {
@@ -76,13 +77,16 @@ double NewLength(std::vector<int> perm_old, double length_old, int i, int j, std
 
 
 int FindPosition(std::vector<int> perm, double value) {
-    int size = perm.size();
-    for (int i = 0; i < size; i++) {
-        if (perm[i] == value)
-            return i;
+    auto it = std::find(perm.begin(), perm.end(), value);
+
+    if (it != perm.end()){
+        int index = it - perm.begin();
+        return index;
     }
-    std::cout << "Error: " << value << " not found in permutation." << std::endl;
-    return -1;
+    else {
+        //std::cout << "Error: " << value << " not found in permutation." << std::endl;
+        return -1;
+    }
 }
 
 
@@ -173,6 +177,13 @@ int Evolution::Evolve(double mutation_prob, int no_of_pairs, int max_stale_iter,
             std::cout << "gen: " << generation << "\tbest: " << best_length << std::endl;
         }
 
+        // mutating chromosomes
+        for (int i = 0; i < population_size; i++) { // O(p)
+            if (distrib(rng) < mutation_prob) {
+                population[i] = MutateChrom(population[i]);
+            }
+
+        }
         std::sort(population.begin(), population.end());
 
         // breeding best chromosomes, generating 2 * no_of_pairs too much so will have te remove some later
@@ -199,12 +210,7 @@ int Evolution::Evolve(double mutation_prob, int no_of_pairs, int max_stale_iter,
 
         best_length = new_length;
 
-        // mutating chromosomes
-        for (int i = 0; i < population_size; i++) { // O(p)
-            if (distrib(rng) < mutation_prob) {
-                population[i] = MutateChrom(population[i]);
-            }
-        }
+
 
         generation++;
     }
