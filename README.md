@@ -1,1 +1,1 @@
-Implementation and testing of evulutionary metaheuristic algorithm used to approximate a solution for an instance of the Travelling Salesman Problem.
+Implementation and testing of evolutionary metaheuristic algorithm used to approximate a solution for an instance of the Travelling Salesman Problem.
